@@ -1,0 +1,163 @@
+<html>
+<head>
+<title>俄罗斯方块</title>
+<meta charset="utf-8">
+</head>
+	<style>
+	.c {margin :1px;width:19px;height:19px;background:green;position:absolute;margin:60px 300px;}
+	.d {margin :1px;width:19px;height:19px;background:#007979;position:absolute;margin:60px 300px;}
+	.f {top:0px;left:0px;background:#EEF;position:absolute;margin:60px 300px;}
+	#cont1{
+		width: 600px;
+		height: 500px;
+		background-image:url('./img/bg.jpg'); 
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+		border: 1px solid black;
+		padding-left:30px;
+	}
+	</style>
+	<body>
+	<script>
+		var over=false,
+		shapes=("0,1,1,1,2,1,3,1;1,0,1,1,1,2,2,2;2,0,2,1,2,2,1,2;0,1,1,1,1,2,2,2;1,2,2,2,2,1,3,1;1,1,2,1,1,2,2,2;0,2,1,2,1,1,2,2").split(";"),
+		score=0;
+	    function create(tag,css){
+	        var elm=document.createElement(tag);
+	        elm.className = css;
+	        document.body.appendChild(elm);
+	        return elm;
+	    }
+
+	    function Tetris(c, t, x, y){
+	        var c=c?c:"c";
+	        this.divs = [create("div",c),create("div",c),create("div",c),create("div",c)];
+	        //方块检查，是否到边界，或者是否与其他方块相互碰撞
+	        this.reset = function(){
+	            this.x = typeof x != 'undefined'?x:3;
+	            this.y = typeof y != 'undefined'?y:0;
+	            this.shape = t?t:shapes[Math.floor(Math.random()*(shapes.length-0.00001))].split(",");
+	            this.square();
+	            if(this.field&&this.field.check(this.shape,this.x,this.y,'v')=='D'){
+	                over=true;
+	                this.field.fixShape(this.shape,this.x,this.y);
+	                alert('game over');}
+	        }
+	        this.square = function(){
+	            for(var i in this.divs){
+	                this.divs[i].style.left = (this.shape[i*2]*1+this.x)*20+'px';
+	                this.divs[i].style.top = (this.shape[i*2+1]*1+this.y)*20+'px';}}
+	        this.field=null;
+	        this.hMove = function(step){
+	            var r = this.field.check(this.shape,this.x- -step,this.y,'h');
+	            if(r!='N'&&r==0){
+	                this.x-=-step;
+	                this.square();}}
+	        this.vMove = function(){
+	            if(this.field.check(this.shape,this.x,this.y- -1,'v')=='N'){
+	                this.y++;
+	                this.square();}
+	            else{
+	                this.field.fixShape(this.shape,this.x,this.y);
+	                this.field.findFull();
+	                this.reset();}}
+	        this.rotate = function(){
+	            var s=this.shape;
+	            var newShape=[3-s[1],s[0],3-s[3],s[2],3-s[5],s[4],3-s[7],s[6]];
+	            var r = this.field.check(newShape,this.x,this.y,'h');
+	            if(r=='D')return;
+	            if(r==0){  //未超边界，执行square，将方块固定
+	                this.shape=newShape;
+	                this.square();
+	            }
+	            //底下的else if就是指r<0时，超出左边界
+	            else if(this.field.check(newShape,this.x-r,this.y,'h')==0){
+	                this.x-=r;//x=x-r;r=shape[i]--x;所以x=shape[i]
+	                this.shape=newShape;
+	                this.square();
+	            }
+	        }
+	        this.reset();
+	    }
+
+	    function Field(w,h){
+	        this.width = w?w:10;
+	        this.height = h?h:20;
+	        this.square = function(){
+	            var f = create("div","f")
+	            f.style.width=this.width*20+'px';
+	            f.style.height=this.height*20+'px';}
+	        this.findFull = function(){
+	            for(var l=0;l<this.height;l++){
+	                var s=0;
+	                for(var i=0;i<this.width;i++){
+	                    s+=this[l*this.width+i]?1:0;}
+	                if(s==this.width){
+	                    this.removeLine(l);}}}
+	        this.removeLine = function(line){
+
+	            for(var i=0;i<this.width;i++){
+	                document.body.removeChild(this[line*this.width+i]);}
+	            for(var l=line;l>0;l--){
+	                for(var i=0;i<this.width;i++){
+	                    this[l*this.width- -i]=this[(l-1)*this.width- -i];
+	                    if(this[l*this.width- -i])this[l*this.width- -i].style.top = l*20+'px';
+	                }
+	            }
+	            score+=10;
+                document.getElementById('score').value=score;  
+	        }
+	        this.check = function(shape, x, y, d){
+	            var r1=0,r2='N';
+	            for(var i=0;i<8;i+=2){
+	                if(shape[i]- -x < 0 && shape[i]- -x <r1)
+	                    {r1 = shape[i]- -x;}
+	                else if(shape[i]- -x>=this.width && shape[i]- -x>r1)
+	                    {r1 = shape[i]- -x;}
+	                if(shape[i+1]- -y>=this.height || this[shape[i]- -x- -(shape[i+1]- -y)*this.width])
+	                    {r2='D'}}
+	            if(d=='h'&&r2=='N')return r1>0?r1-this.width- -1:r1;//此时的r1≤0，而当r1=0的时候方块才没超边界
+	            else return r2;}
+	        this.fixShape = function(shape,x,y){
+	            var d=new Tetris("d",shape,x,y);
+	            d.square();
+	            for(var i=0;i<8;i+=2){
+	                this[shape[i]- -x- -(shape[i+1]- -y)*this.width]=d.divs[i/2];
+	            }
+	        }
+	    }
+
+	    var bground = new Field();
+	    bground.square();
+	    var s = new Tetris();
+	    s.field = bground;
+	    s.square();
+	    window.setInterval("if(!over)s.vMove();",500);
+	    document.onkeydown = function(e){
+	        if(over)return;
+	        var e = window.event ? window.event : e;
+	        switch(e.keyCode){
+	        case 38: //up
+	            s.rotate();
+	            break;
+	        case 40: //down
+	            s.vMove();
+	            break;
+	        case 37: //left
+	            s.hMove(-1);
+	            break;
+	        case 39: //right
+	            s.hMove(1);
+	            break;
+	        }
+	    }
+	    var Cont1=document.getElementById("cont1")
+	    
+</script>
+<div id="cont1" >
+	<h1>Tetris</h1>
+	<span>你的分数：</span></br>
+	<input type="text", id="score", value="0" />
+</div>
+</body>
+</html>
